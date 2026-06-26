@@ -14,7 +14,7 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITER, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: PBKDF2_ITER, hash: "SHA-256" },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
@@ -27,7 +27,7 @@ export async function encryptPayload(plain: Uint8Array, password: string): Promi
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt);
   const cipher = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plain),
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, plain as BufferSource),
   );
   const out = new Uint8Array(MAGIC.length + salt.length + iv.length + cipher.length);
   out.set(MAGIC, 0);
@@ -47,7 +47,7 @@ export async function decryptPayload(blob: Uint8Array, password: string): Promis
   const cipher = blob.slice(32);
   const key = await deriveKey(password, salt);
   try {
-    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, cipher as BufferSource);
     return new Uint8Array(plain);
   } catch {
     throw new Error("Decryption failed — wrong password or corrupted data.");
@@ -55,7 +55,7 @@ export async function decryptPayload(blob: Uint8Array, password: string): Promis
 }
 
 export async function sha256Hex(data: Uint8Array): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", data);
+  const buf = await crypto.subtle.digest("SHA-256", data as BufferSource);
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
